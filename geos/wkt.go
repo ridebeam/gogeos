@@ -34,7 +34,9 @@ func (d *wktDecoder) decode(wkt string) (*Geometry, error) {
 	if g == nil {
 		return nil, Error()
 	}
-	return geomFromPtr(g), nil
+	gg := geomFromPtr(g)
+	runtime.KeepAlive(d)
+	return gg, nil
 }
 
 func (d *wktDecoder) destroy() {
@@ -60,10 +62,13 @@ func newWktEncoder() *wktEncoder {
 // Encode returns a string that is the geometry encoded as WKT
 func (e *wktEncoder) encode(g *Geometry) (string, error) {
 	cstr := cGEOSWKTWriter_write(e.w, g.g)
+	defer C.free(unsafe.Pointer(cstr))
 	if cstr == nil {
 		return "", Error()
 	}
-	return C.GoString(cstr), nil
+	ret := C.GoString(cstr)
+	runtime.KeepAlive(e)
+	return ret, nil
 }
 
 func (e *wktEncoder) destroy() {
@@ -71,3 +76,4 @@ func (e *wktEncoder) destroy() {
 	cGEOSWKTWriter_destroy(e.w)
 	e.w = nil
 }
+
